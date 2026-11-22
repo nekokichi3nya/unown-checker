@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+<title>アンノーン集め ファイアレッド・リーフグリーン</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column; sticky progress header, then one stone slab per chamber with a grid of glyph tiles */
+:root {
+  --bg: #e6e9ec;
+  --slab: #f6f7f8;
+  --line: #c9ced4;
+  --fg: #1e2329;
+  --muted: #5d6670;
+  --tile: #dde1e6;
+  --glyph: #3b434c;
+  --accent: #c27a1a;
+  --accent-ink: #ffffff;
+  --accent-soft: #f3e2c6;
+  --font-glyph: "Cinzel", "Times New Roman", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181d; --slab: #1d232a; --line: #2e3640; --fg: #e8ebef; --muted: #98a2ad;
+    --tile: #262d35; --glyph: #b5bec8; --accent: #e3a043; --accent-ink: #1a1206; --accent-soft: #3a2c17;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181d; --slab: #1d232a; --line: #2e3640; --fg: #e8ebef; --muted: #98a2ad;
+  --tile: #262d35; --glyph: #b5bec8; --accent: #e3a043; --accent-ink: #1a1206; --accent-soft: #3a2c17;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+.wrap {
+  max-width: 560px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 40px;
+}
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 16px 14px;
+  display: grid; gap: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font-size: 1.15rem; font-weight: 700; text-wrap: balance; }
+.count { font-family: var(--font-glyph); font-weight: 800; font-size: 1.6rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.count small { font-size: 1rem; color: var(--muted); font-weight: 600; }
+.bar { height: 8px; border-radius: 4px; background: var(--tile); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip {
+  font: inherit; font-size: .85rem; color: var(--fg);
+  background: var(--slab); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.chip:focus-visible, .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.spacer { flex: 1; }
+.done-msg { color: var(--accent); font-weight: 700; font-size: .9rem; }
+
+main { display: grid; gap: 14px; padding-top: 16px; }
+section {
+  background: var(--slab); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 12px 14px;
+}
+.sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+h2 { margin: 0; font-size: 1rem; font-weight: 700; }
+h2 span { color: var(--muted); font-weight: 500; font-size: .8rem; margin-left: 6px; }
+.sec-count { font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sec-count.full { color: var(--accent); font-weight: 700; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.tile {
+  position: relative; aspect-ratio: 1; max-width: 100%;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--tile);
+  font-family: var(--font-glyph); font-weight: 800; font-size: clamp(1.4rem, 7vw, 2rem);
+  color: var(--glyph); cursor: pointer; padding: 0;
+  display: grid; place-items: center;
+  transition: background .15s, color .15s, transform .08s;
+}
+.tile:active { transform: scale(.94); }
+.tile[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tile[aria-pressed="true"]::after {
+  content: "✓"; position: absolute; top: 3px; right: 6px;
+  font-family: var(--font-body); font-size: .75rem; font-weight: 700;
+}
+.tile .n {
+  position: absolute; bottom: 3px; left: 0; right: 0; text-align: center;
+  font-family: var(--font-body); font-size: .68rem; font-weight: 700; opacity: .8;
+  font-variant-numeric: tabular-nums;
+}
+.cell { display: grid; gap: 4px; min-width: 0; }
+.cell[hidden] { display: none !important; }
+.minus {
+  font: inherit; font-size: .8rem; font-weight: 700; color: var(--fg);
+  background: var(--slab); border: 1px solid var(--line); border-radius: 6px;
+  padding: 2px 0; cursor: pointer;
+}
+.minus:disabled { opacity: .35; cursor: default; }
+.total-enc { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { font-size: .8rem; color: var(--accent); font-weight: 700; }
+.pct { text-align: center; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.1em; }
+.sec-enc { font-size: .78rem; color: var(--muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
+section.allhidden { display: none; }
+.box-sec h2 { margin-bottom: 4px; }
+.box-note { font-size: .8rem; color: var(--muted); margin: 0 0 10px; }
+.box { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.slot {
+  position: relative; aspect-ratio: 1; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--tile); color: var(--glyph); display: grid; place-items: center;
+  font-family: var(--font-glyph); font-weight: 800; font-size: clamp(1.1rem, 5.5vw, 1.6rem);
+}
+.slot .no { position: absolute; top: 2px; left: 4px; font-family: var(--font-body); font-size: .6rem; font-weight: 500; color: var(--muted); }
+.slot.got { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.slot.got .no { color: var(--accent-ink); opacity: .75; }
+.slot.empty { background: transparent; border-style: dashed; }
+
+.confirm {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  font-size: .85rem; background: var(--accent-soft); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 8px 10px;
+}
+.confirm .chip.danger { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+footer { margin-top: 20px; color: var(--muted); font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1><small style="display:block;font-size:.72rem;font-weight:500;color:var(--muted)">ポケットモンスター ファイアレッド・リーフグリーン</small>アンノーン集め</h1>
+      <div class="count" aria-live="polite"><span id="got">0</span><small> / 28</small></div>
+    </div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="28" aria-valuenow="0" id="bar"><i id="fill"></i></div>
+    <div class="tools">
+      <button class="chip" id="onlyMissing" aria-pressed="false" type="button">未遭遇だけ表示</button>
+      <span class="done-msg" id="doneMsg" hidden>全28種コンプリート！</span>
+      <span class="spacer"></span>
+      <button class="chip" id="resetBtn" type="button">リセット</button>
+    </div>
+    <div class="tools">
+      <span class="total-enc">遭遇 合計 <b id="encTotal">0</b> 回</span>
+    </div>
+    <div class="confirm" id="confirm" hidden>
+      <span>遭遇回数を全部消しますか？</span>
+      <button class="chip danger" id="resetYes" type="button">消す</button>
+      <button class="chip" id="resetNo" type="button">やめる</button>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <section class="box-sec" style="margin-top:14px">
+    <h2>ボックスの並べ方<span>横6 × 縦5</span></h2>
+    <p class="box-note">左上から右へ A→Z、最後に ！ と ？。色がついているのが捕まえたものです。残り2マスは空き。</p>
+    <div class="box" id="box"></div>
+  </section>
+
+  <footer>文字をタップするたびに遭遇回数が +1 され、下の −1 で減らせます。1回以上で遭遇済み、0回なら未遭遇です。記録はこの端末のブラウザに保存されます。</footer>
+</div>
+
+<script>
+const CHAMBERS = [
+  { name: "オリフ", letters: ["Z", "!"] },
+  { name: "アヌザ", letters: ["V", "W", "X", "M", "B"] },
+  { name: "コトー", letters: ["Y", "T", "G", "F", "K"] },
+  { name: "アレボカ", letters: ["P", "L", "J", "R", "Q"] },
+  { name: "ユゴ", letters: ["N", "S", "I", "E"] },
+  { name: "ナザン", letters: ["C", "D", "H", "U", "O"] },
+  { name: "イレス", letters: ["A", "?"] },
+];
+const KEY = "unown-checklist-v1";
+const TOTAL = 28;
+let caught = new Set();
+let onlyMissing = false;
+let counts = {};
+let countMode = false;
+
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) caught = new Set(JSON.parse(raw));
+  onlyMissing = localStorage.getItem(KEY + "-filter") === "1";
+  const rc = localStorage.getItem(KEY + "-counts");
+  if (rc) counts = JSON.parse(rc) || {};
+} catch (e) {}
+
+caught.forEach(l => { if (!(counts[l] > 0)) counts[l] = 1; });
+caught = new Set(Object.keys(counts).filter(l => counts[l] > 0));
+
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify([...caught]));
+    localStorage.setItem(KEY + "-counts", JSON.stringify(counts));
+  } catch (e) {}
+}
+
+const main = document.getElementById("main");
+const tiles = [];
+const sections = [];
+
+CHAMBERS.forEach(ch => {
+  const sec = document.createElement("section");
+  const head = document.createElement("div");
+  head.className = "sec-head";
+  const h2 = document.createElement("h2");
+  h2.innerHTML = `${ch.name}<span>の石室</span>`;
+  const cnt = document.createElement("span");
+  cnt.className = "sec-count";
+  head.append(h2, cnt);
+  const grid = document.createElement("div");
+  grid.className = "grid";
+  ch.letters.forEach(l => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tile";
+    b.id = "u-" + (l === "!" ? "ex" : l === "?" ? "q" : l);
+    b.textContent = l;
+    b.setAttribute("aria-label", "アンノーン " + (l === "!" ? "！" : l === "?" ? "？" : l));
+    const n = document.createElement("span");
+    n.className = "n";
+    b.append(n);
+    b.addEventListener("click", () => {
+      counts[l] = (counts[l] || 0) + 1; caught.add(l);
+      save(); render();
+    });
+    const m = document.createElement("button");
+    m.type = "button";
+    m.className = "minus";
+    m.textContent = "−1";
+    m.setAttribute("aria-label", b.getAttribute("aria-label") + " の遭遇回数を1減らす");
+    m.addEventListener("click", () => {
+      if ((counts[l] || 0) > 0) { counts[l]--; if (counts[l] === 0) caught.delete(l); save(); render(); }
+    });
+    const p = document.createElement("div");
+    p.className = "pct";
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    cell.append(b, p, m);
+    grid.append(cell);
+    tiles.push({ el: b, l, n, m, p, cell, ch });
+  });
+  const enc = document.createElement("div");
+  enc.className = "sec-enc";
+  sec.append(head, grid, enc);
+  main.append(sec);
+  sections.push({ sec, cnt, ch, enc });
+});
+
+const filterBtn = document.getElementById("onlyMissing");
+filterBtn.addEventListener("click", () => {
+  onlyMissing = !onlyMissing;
+  try { localStorage.setItem(KEY + "-filter", onlyMissing ? "1" : "0"); } catch (e) {}
+  render();
+});
+
+const BOX_ORDER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?".split("");
+const boxEl = document.getElementById("box");
+const slots = [];
+for (let i = 0; i < 30; i++) {
+  const d = document.createElement("div");
+  const l = BOX_ORDER[i];
+  d.className = "slot" + (l ? "" : " empty");
+  if (l) {
+    d.innerHTML = `<span class="no">${i + 1}</span>${l}`;
+    slots.push({ el: d, l });
+  }
+  boxEl.append(d);
+}
+
+
+const confirmBox = document.getElementById("confirm");
+document.getElementById("resetBtn").addEventListener("click", () => { confirmBox.hidden = false; });
+document.getElementById("resetNo").addEventListener("click", () => { confirmBox.hidden = true; });
+document.getElementById("resetYes").addEventListener("click", () => {
+  caught.clear(); counts = {}; save(); confirmBox.hidden = true; render();
+});
+
+function render() {
+  tiles.forEach(t => {
+    const on = caught.has(t.l);
+    t.el.setAttribute("aria-pressed", on ? "true" : "false");
+    t.cell.hidden = onlyMissing && on;
+    const c = counts[t.l] || 0;
+    t.n.textContent = c > 0 ? "×" + c : "";
+    t.m.disabled = c === 0;
+    const chTotal = t.ch.letters.reduce((a, x) => a + (counts[x] || 0), 0);
+    t.p.textContent = chTotal > 0 ? (c / chTotal * 100).toFixed(1) + "%" : "";
+  });
+  slots.forEach(s => s.el.classList.toggle("got", caught.has(s.l)));
+  document.getElementById("encTotal").textContent = Object.values(counts).reduce((a, b) => a + b, 0);
+  sections.forEach(s => {
+    const n = s.ch.letters.filter(l => caught.has(l)).length;
+    const all = s.ch.letters.length;
+    s.cnt.textContent = n === all ? `${n}/${all} 完了` : `${n}/${all}`;
+    s.cnt.classList.toggle("full", n === all);
+    s.sec.classList.toggle("allhidden", onlyMissing && n === all);
+    const tot = s.ch.letters.reduce((a, x) => a + (counts[x] || 0), 0);
+    s.enc.textContent = tot > 0 ? `この石室で ${tot} 回遭遇（%はこの石室の中での出現率）` : "";
+    s.enc.hidden = tot === 0;
+  });
+  const n = caught.size;
+  document.getElementById("got").textContent = n;
+  document.getElementById("fill").style.width = (n / TOTAL * 100) + "%";
+  document.getElementById("bar").setAttribute("aria-valuenow", n);
+  document.getElementById("doneMsg").hidden = n !== TOTAL;
+  filterBtn.setAttribute("aria-pressed", onlyMissing ? "true" : "false");
+}
+render();
+</script>
+</body>
+</html>
